@@ -11,6 +11,9 @@ image assets.
 
 ![Carbon // Grid preview](docs/preview.jpeg)
 
+New here? Click **Guide** in the top bar for an interactive walkthrough, or read
+the presenter script in [DEMO.md](DEMO.md).
+
 ## Run
 
 ```bash
@@ -54,6 +57,7 @@ Vite's [`base`](https://vite.dev/config/shared-options.html#base) accordingly.
 
 | Action | Control |
 | --- | --- |
+| Guided demo | **Guide** button (or first visit) |
 | Orbit / zoom | Drag and scroll on the globe |
 | Focus a region | Click a region card or its data center |
 | Switch world | **Baseline** / **Carbon-Aware** |
@@ -105,6 +109,7 @@ src/
   scene/jobs3d.js     job cubes, routing arcs, delay clocks, completion effects
   ui/panels.js        cards, metrics, log, detail card, controls
   ui/charts.js        Chart.js carbon-intensity history
+  ui/onboarding.js    8-step guided demo used by the Guide button
   assets/land.json    Natural Earth 110m land geometry for the texture
 scripts/
   stress.mjs          headless multi-day scheduler stress test

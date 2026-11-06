@@ -15,6 +15,7 @@ import { createDataCenter } from './scene/datacenter.js';
 import { JobVisuals } from './scene/jobs3d.js';
 import { UI } from './ui/panels.js';
 import { CIChart } from './ui/charts.js';
+import { GuidedTour } from './ui/onboarding.js';
 
 // ---------------------------------------------------------------- parameters
 
@@ -157,6 +158,41 @@ ui.setSpeed(1);
 seedInitialJobs();
 ui.update(worlds.aware, worlds.aware, worlds.baseline, grid, clock);
 
+// ------------------------------------------------------------------- guide
+
+const guide = new GuidedTour({
+  onFocusRegion: selectRegion,
+  onRunBaseline: () => {
+    setMode('baseline');
+    setSpeed(4);
+    resetSimulation();
+  },
+  onShowAware: () => {
+    setMode('aware');
+    setSpeed(4);
+    clock.running = true;
+    ui.setRunning(true);
+  },
+  onParam: (key, value) => {
+    params[key] = value;
+    ui.syncParamInputs();
+  },
+  onDefaults: () => {
+    params.urgentShare = 0.3;
+    params.greenThreshold = 200;
+    params.routeGain = 0.25;
+    ui.syncParamInputs();
+  },
+  onBatch: submitBatchOfTen,
+  onMode: setMode,
+  onPause: () => {
+    clock.running = false;
+    ui.setRunning(false);
+  },
+});
+
+document.getElementById('btn-guide').addEventListener('click', () => guide.open(0));
+
 // ------------------------------------------------------------------ actions
 
 function setMode(next) {
@@ -288,6 +324,7 @@ canvas.addEventListener('pointerup', (event) => {
 window.addEventListener('keydown', (event) => {
   const tag = event.target?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (guide.isOpen) return;
   if (event.code === 'Space') {
     event.preventDefault();
     togglePlay();
@@ -409,7 +446,10 @@ function frame() {
   if (!booted) {
     booted = true;
     // Let the first frame paint before revealing the scene.
-    requestAnimationFrame(() => document.getElementById('boot').classList.add('done'));
+    requestAnimationFrame(() => {
+      document.getElementById('boot').classList.add('done');
+      guide.maybeAutoOpen();
+    });
   }
 }
 
@@ -435,4 +475,5 @@ window.__carbon = {
   triggerEvent,
   resetSimulation,
   focusRegion,
+  guide,
 };
