@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A live 3D simulation of carbon-aware job scheduling across four cloud regions."
+    />
+    <title>Carbon // Grid — Carbon-Aware Job Scheduling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="scene-wrap">
+      <canvas id="scene"></canvas>
+    </div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><span></span></div>
+        <div class="brand-txt">
+          <div class="brand-title">CARBON<span>//</span>GRID</div>
+          <div class="brand-sub">carbon-aware job scheduling</div>
+        </div>
+      </div>
+
+      <div class="mode-wrap">
+        <div class="mode-label">SCHEDULER</div>
+        <div class="mode-switch" id="mode-switch">
+          <button data-mode="baseline">Baseline</button>
+          <button data-mode="aware" class="active">Carbon-Aware</button>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <div class="clock">
+          <div class="clock-main"><span id="clock-utc">14:00</span><em>UTC</em></div>
+          <div class="clock-sub"><span id="clock-day">DAY 1</span> · <span id="clock-date">Sun 21 Jun</span></div>
+        </div>
+        <button id="btn-play" class="icon-btn" title="Pause simulation">❚❚</button>
+        <div class="speed-group" id="speed-group">
+          <button data-speed="1" class="active">1×</button>
+          <button data-speed="2">2×</button>
+          <button data-speed="4">4×</button>
+        </div>
+        <select id="day-length" title="Real seconds per simulated day">
+          <option value="30">30s / day</option>
+          <option value="60" selected>60s / day</option>
+          <option value="120">120s / day</option>
+        </select>
+        <button id="btn-reset-view" class="ghost-btn" title="Reset camera">Reset view</button>
+      </div>
+    </header>
+
+    <aside class="left-panel side-panel">
+      <div class="section-label">REGIONS <span>4</span></div>
+      <div id="region-cards" class="region-list"></div>
+
+      <section class="card controls-card">
+        <div class="card-head"><h2>Controls</h2><span class="card-tag">LIVE</span></div>
+
+        <div class="control">
+          <div class="control-label"><span>Job arrival rate</span><output id="out-rate">2.0/h</output></div>
+          <input id="in-rate" type="range" min="0.5" max="8" step="0.5" value="2" />
+        </div>
+        <div class="control">
+          <div class="control-label"><span>Urgent share</span><output id="out-urgent">30%</output></div>
+          <input id="in-urgent" type="range" min="0" max="100" step="5" value="30" />
+        </div>
+        <div class="control">
+          <div class="control-label"><span>Green threshold</span><output id="out-threshold">200</output></div>
+          <input id="in-threshold" type="range" min="80" max="500" step="10" value="200" />
+          <div class="control-hint">gCO₂/kWh · run locally below this</div>
+        </div>
+        <div class="control">
+          <div class="control-label"><span>Route gain</span><output id="out-gain">25%</output></div>
+          <input id="in-gain" type="range" min="5" max="60" step="5" value="25" />
+          <div class="control-hint">move only if destination is this much cleaner</div>
+        </div>
+
+        <div class="control-foot">4 regions · 32 slots · 6 h perfect forecast</div>
+        <div class="btn-row">
+          <button id="btn-batch" class="primary-btn">Submit 10 flexible jobs</button>
+          <button id="btn-reset" class="ghost-btn">Reset</button>
+        </div>
+      </section>
+    </aside>
+
+    <aside class="right-panel side-panel">
+      <section class="card chart-card">
+        <div class="card-head"><h2>Grid carbon intensity</h2><span class="card-tag">24H</span></div>
+        <div class="chart-wrap"><canvas id="ci-chart"></canvas></div>
+        <div class="scale-legend">
+          <span><i style="background: #3df5a5"></i>CLEAN &lt;200</span>
+          <span><i style="background: #ffc857"></i>MODERATE</span>
+          <span><i style="background: #ff5d5d"></i>DIRTY &gt;450</span>
+          <em>gCO₂/kWh</em>
+        </div>
+      </section>
+
+      <section class="card log-card">
+        <div class="card-head">
+          <h2>Scheduler log</h2>
+          <span class="card-tag" id="log-mode">CARBON-AWARE</span>
+        </div>
+        <div id="log-list" class="log-list"></div>
+      </section>
+
+      <section class="card event-card">
+        <div class="card-head"><h2>Grid events</h2><span class="card-tag">2H</span></div>
+        <select id="event-region" class="event-select" title="Target region"></select>
+        <div id="event-grid" class="event-grid"></div>
+      </section>
+    </aside>
+
+    <div id="scene-hint" class="scene-hint">DRAG TO ORBIT · SCROLL TO ZOOM · CLICK A DATA CENTER</div>
+
+    <footer class="metrics">
+      <div class="metric">
+        <span class="metric-label">Jobs done</span>
+        <span class="metric-value" id="m-jobs">0</span>
+        <span class="metric-sub" id="m-jobs-sub">baseline 0 done</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Carbon-aware emissions</span>
+        <span class="metric-value" id="m-aware">0.0 kg</span>
+        <span class="metric-sub" id="m-aware-sub">0 kWh served</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Baseline emissions</span>
+        <span class="metric-value" id="m-baseline">0.0 kg</span>
+        <span class="metric-sub" id="m-baseline-sub">carbon-blind · run now</span>
+      </div>
+      <div class="metric headline">
+        <span class="metric-label">CO₂ saved</span>
+        <span class="metric-value" id="m-saved">0.0 kg</span>
+        <span class="metric-sub" id="m-saved-pct">0% less CO₂ than baseline</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Avg flex delay</span>
+        <span class="metric-value" id="m-delay">0m</span>
+        <span class="metric-sub" id="m-delay-sub">0 delayed · 0 routed</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Deadline misses</span>
+        <span class="metric-value" id="m-miss">0</span>
+        <span class="metric-sub" id="m-miss-sub">deadline guard active</span>
+      </div>
+    </footer>
+
+    <section id="region-detail" class="detail-card hidden">
+      <button id="detail-close" class="detail-close" title="Close">×</button>
+      <div class="detail-top">
+        <div>
+          <div class="detail-name" id="detail-name">Oregon</div>
+          <div class="detail-sub" id="detail-sub">US-West</div>
+        </div>
+        <div class="detail-ci" id="detail-ci">0 gCO₂/kWh</div>
+      </div>
+      <div id="detail-events" class="detail-events"></div>
+      <div class="detail-grid">
+        <div><span>Renewable</span><b id="detail-renew">0%</b></div>
+        <div><span>Solar</span><b id="detail-solar">0%</b></div>
+        <div><span>Wind</span><b id="detail-wind">0%</b></div>
+        <div><span>Load</span><b id="detail-load">0/8</b></div>
+        <div><span>Queued</span><b id="detail-queue">0</b></div>
+        <div><span>Delayed</span><b id="detail-delayed">0</b></div>
+      </div>
+      <div class="forecast-title">NEXT 6H FORECAST <em>perfect look-ahead</em></div>
+      <div id="detail-forecast" class="forecast"></div>
+    </section>
+
+    <div id="toasts"></div>
+
+    <div id="boot">
+      <div class="boot-inner">
+        <div class="boot-mark"></div>
+        <div class="boot-title">CARBON <span>//</span> GRID</div>
+        <div class="boot-sub">spinning up four grids</div>
+        <div class="boot-bar"><i></i></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
